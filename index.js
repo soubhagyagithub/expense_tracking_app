@@ -130,5 +130,5 @@ function handleFormSubmit(event) {
     }
 }
 
-// Calling the function to show all expenses when the page loads or refresh
+
 
