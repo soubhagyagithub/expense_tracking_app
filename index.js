@@ -1,5 +1,5 @@
-// creating a function which will add a row to the table when it will be called
-function addRowToTable(tableBody, expenseDetails, expenseKey) {
+// creating function to add row in table
+function addRowToTable(tableBody, expenseDetails) {
     const newRow = tableBody.insertRow();
     const amountCell = newRow.insertCell(0);
     const descriptionCell = newRow.insertCell(1);
@@ -17,8 +17,15 @@ function addRowToTable(tableBody, expenseDetails, expenseKey) {
     deleteButton.classList.add('btn', 'btn-danger', 'btn-sm');
 
     deleteButton.onclick = () => {
-        localStorage.removeItem(expenseKey);
-        tableBody.removeChild(newRow);
+        console.log('Deleting user with ID:', expenseDetails._id);
+        axios.delete(`https://crudcrud.com/api/65bf6aabae564cbfaaf25d1d3336d02b/expenseData/${expenseDetails._id}`)
+        .then((res) =>{
+            tableBody.removeChild(newRow);
+            console.log('user got deleted');
+        })
+        .catch((err) => {
+            console.log('Error while deleting the user ', err);
+          });
     }
     deleteCell.appendChild(deleteButton);
 
@@ -33,30 +40,34 @@ function addRowToTable(tableBody, expenseDetails, expenseKey) {
 
         // Adding editing class to the row
         newRow.classList.add('editing');
-    }
+
+         // Storing the ID of the expense being edited
+        newRow.dataset.expenseId = expenseDetails._id;
+
+       
+    };
+    
     editCell.appendChild(editButton);
 
-    // Setting data-expense-key attribute
-    newRow.setAttribute('data-expense-key', expenseKey);
+   
+    
 }
 
-// showing all expenses from local storage
-function showAllExpenses() {
+// showing all expenses from crudcurd.com database when page is loaded
+document.addEventListener('DOMContentLoaded', () =>{
     const tableBody = document.getElementById('expense-table-body');
-
-    // Clearing existing rows
-    tableBody.innerHTML = '';
-
-    // Looping through local storage and populating the table
-    for (let i = 0; i < localStorage.length; i++) {
-        const expenseKey = localStorage.key(i);
-        const expenseDetails = JSON.parse(localStorage.getItem(expenseKey));
-
-        // calling the function to add a row to the table
-        addRowToTable(tableBody, expenseDetails, expenseKey);
-    }
-}
-
+    axios.get('https://crudcrud.com/api/65bf6aabae564cbfaaf25d1d3336d02b/expenseData')
+        .then((res) => {
+            for (let i = 0; i < res.data.length; i++) {
+                const expenseDetails = res.data[i];
+               
+                addRowToTable(tableBody, expenseDetails);
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+});
 // creating handleFormSubmit function
 function handleFormSubmit(event) {
     event.preventDefault();
@@ -86,19 +97,33 @@ function handleFormSubmit(event) {
 
             row.classList.remove('editing');
 
-            const editedExpenseKey = row.getAttribute('data-expense-key');
-            localStorage.setItem(editedExpenseKey, JSON.stringify(expenseDetails));
+           
+            const editedExpenseId = row.dataset.expenseId;
+            // Making a PUT request for editing
+            
+            axios.put(`https://crudcrud.com/api/65bf6aabae564cbfaaf25d1d3336d02b/expenseData/${editedExpenseId}`,expenseDetails)
+                .then((res) => {
+                    console.log('Expense edited successfully');
+                })
+                .catch((err) => {
+                    console.log('Error while editing the expense ', err);
+                });
+            event.target.reset();
         }
     }
+        
+    
     //  if not editing then add new item
     if (editedExpenseIndex === -1) {
-        // Generating a new key for the new expense
-        const newExpenseKey = `${category}-${Date.now()}`;
-
-        addRowToTable(tableBody, expenseDetails, newExpenseKey);
-
-        // Saving the new expense to local storage
-        localStorage.setItem(newExpenseKey, JSON.stringify(expenseDetails));
+    //    making post request for adding item into the database as well as to the screen
+        axios.post('https://crudcrud.com/api/65bf6aabae564cbfaaf25d1d3336d02b/expenseData',expenseDetails)
+        .then((res) =>{
+            addRowToTable(tableBody, expenseDetails);
+        })
+        .catch((err) => {
+            document.body.innerHTML = document.body.innerHTML + '<h4>Something went wrong</h4>';
+            console.log(err);
+        })
 
         // Clearing the form after adding item to table
         event.target.reset();
@@ -106,4 +131,4 @@ function handleFormSubmit(event) {
 }
 
 // Calling the function to show all expenses when the page loads or refresh
-window.onload = showAllExpenses;
+
